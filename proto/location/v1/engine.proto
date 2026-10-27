@@ -1,0 +1,54 @@
+syntax = "proto3";
+package location.v1;
+option go_package = "github.com/nangongwentian-fe/location-sdk-go/protocol";
+
+service Engine {
+  rpc Info(InfoRequest) returns (InfoResponse);
+  rpc ValidateConfig(ConfigRequest) returns (ConfigResponse);
+  rpc EvaluateLocations(LocationRequest) returns (LocationResponse);
+  rpc EvaluateAlarms(AlarmRequest) returns (AlarmResponse);
+}
+message InfoRequest {}
+message InfoResponse { string version = 1; uint32 protocol_version = 2; repeated string rulesets = 3; repeated string state_formats = 4; }
+message ConfigRequest { string kind = 1; string ruleset = 2; bytes parameters_json = 3; }
+message ConfigResponse { bytes parameters_json = 1; }
+message Coordinate { double lat = 1; double lon = 2; }
+message Anchor { optional int64 sample_id = 1; int64 time = 2; double lat = 3; double lon = 4; }
+message Spatial {
+  int64 project_scope_version = 1;
+  string project_scope_key = 2;
+  bool project_boundary = 3;
+  Coordinate project_nearest = 4;
+  optional int64 assigned_site_id = 5;
+  optional string classification = 6;
+  optional bool raw_in_site = 7;
+}
+message Sample { optional int64 sample_id = 1; int64 time = 2; optional double lat = 3; optional double lon = 4; optional double step = 5; Spatial spatial = 6; }
+message LocationState { bytes payload_json = 1; Anchor last_land = 2; Anchor history_land = 3; bool reset_for_replay = 4; }
+message LocationRequest { string device_id = 1; string ruleset = 2; bytes parameters_json = 3; LocationState state = 4; repeated Sample samples = 5; }
+message Decision {
+  string action = 1; optional double clean_lat = 2; optional double clean_lon = 3; string confidence = 4;
+  bool use_in_track = 5; bool use_in_dispatch = 6; bool use_in_live_display = 7;
+  optional int64 coordinate_time = 8; optional int64 coordinate_sample_id = 9; optional string anchor_source = 10;
+  string reason = 11; repeated string reason_codes = 12; repeated string risk_codes = 13;
+  bytes candidate_scores_json = 14; bytes metrics_json = 15; string handled_by = 16;
+}
+message StateProjection { Anchor last_land = 1; Anchor last_clean = 2; Anchor indoor = 3; bool indoor_locked = 4; }
+message LocationResponse { repeated Decision decisions = 1; LocationState state = 2; StateProjection projection = 3; }
+message AlarmState {
+  string phase = 1; string episode_key = 2; optional string scope_key = 3;
+  optional int64 condition_started_at = 4; optional int64 last_land_sample_id = 5;
+  optional int64 next_event_at = 6; int32 occurrence_count = 7;
+}
+message AlarmDevice {
+  string device_id = 1; optional string scope_key = 2; optional string online_status = 3;
+  bool in_catalog = 4; bool in_rule_scope = 5; optional string location_type = 6;
+  optional string motion_status = 7; optional int64 motion_status_since = 8;
+  optional int64 last_land_sample_id = 9; optional int64 last_land_time = 10;
+  optional double last_land_lat = 11; optional double last_land_lon = 12;
+  bool stationary_exempt = 13; optional int64 stationary_reset_at = 14;
+}
+message AlarmInput { string rule_key = 1; string template_code = 2; int32 template_version = 3; bytes parameters_json = 4; AlarmDevice device = 5; AlarmState state = 6; string new_episode_key = 7; }
+message AlarmRequest { int64 now = 1; repeated AlarmInput items = 2; }
+message AlarmResult { AlarmState state = 1; bool delete_state = 2; bool consume_reset = 3; optional int32 occurrence_no = 4; bytes details_json = 5; }
+message AlarmResponse { repeated AlarmResult results = 1; }

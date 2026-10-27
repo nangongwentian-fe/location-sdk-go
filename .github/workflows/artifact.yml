@@ -1,0 +1,40 @@
+name: Engine artifact acceptance
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Engine version without tag prefix
+        required: true
+        default: '0.1.0'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-amd64
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+          - os: macos-14
+            platform: darwin-arm64
+          - os: windows-latest
+            platform: windows-amd64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify and run release artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENGINE_VERSION: ${{ inputs.version }}
+          ENGINE_PLATFORM: ${{ matrix.platform }}
+        shell: bash
+        run: python scripts/check-artifact.py "$ENGINE_VERSION" "$ENGINE_PLATFORM"
