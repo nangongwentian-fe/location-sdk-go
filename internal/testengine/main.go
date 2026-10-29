@@ -18,7 +18,14 @@ func (*service) Info(context.Context, *p.InfoRequest) (*p.InfoResponse, error) {
 	if strings.Contains(filepath.Base(os.Args[0]), "frozen") {
 		_ = exec.Command("/bin/kill", "-STOP", strconv.Itoa(os.Getpid())).Run()
 	}
-	return &p.InfoResponse{Version: "test", ProtocolVersion: sdk.ProtocolVersion, StateFormats: []string{sdk.StateFormat}}, nil
+	info := &p.InfoResponse{Version: "test", ProtocolVersion: sdk.ProtocolVersion, StateFormats: []string{sdk.StateFormat}}
+	if strings.Contains(filepath.Base(os.Args[0]), "wrong-protocol") {
+		info.ProtocolVersion++
+	}
+	if strings.Contains(filepath.Base(os.Args[0]), "wrong-state") {
+		info.StateFormats = []string{"unsupported"}
+	}
+	return info, nil
 }
 func (*service) ValidateConfig(ctx context.Context, in *p.ConfigRequest) (*p.ConfigResponse, error) {
 	if in.Kind == "pid" {
